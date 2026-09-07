@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="gu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<title>Mudra Diamond — Jobwork</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/favicon.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mudra Diamond">
+<link rel="stylesheet" href="./css/app.css?v=5.0.0">
+</head>
+<body>
+
+<!-- ============================= LOGIN ============================= -->
+<div id="loginScreen">
+  <div class="login-card">
+    <img class="logo" src="./icons/icon-192.png" alt="Mudra Diamond">
+    <h1>💎 MUDRA DIAMOND</h1>
+    <div class="sub">Party Jobwork Management</div>
+
+    <label for="liUser">Username</label>
+    <input id="liUser" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="username">
+
+    <div class="pw-wrap">
+      <label for="liPass">Password</label>
+      <input id="liPass" type="password" autocomplete="current-password" placeholder="password">
+      <button type="button" id="showPw" title="Password બતાવો">👁</button>
+    </div>
+
+    <div id="loginErr" class="login-err"></div>
+    <button id="liBtn" class="primary">Login</button>
+    <div class="login-foot">Username / Password ભૂલી ગયા હો તો Admin નો સંપર્ક કરો.</div>
+  </div>
+</div>
+
+<!-- ============================= APP ============================= -->
+<div id="app" style="display:none">
+
+<header>
+  <div><b>💎 MUDRA DIAMOND</b><br><small>Party Jobwork Management</small></div>
+  <div class="userbox no-print">
+    <button id="syncPill" class="local" title="દબાવીને હમણાં sync કરો">⚪ Local only</button>
+    <div class="who"><b id="whoName">—</b><span id="whoRole" class="role-badge">—</span></div>
+    <button class="btn-logout" onclick="doLogout()">Logout</button>
+  </div>
+</header>
+
+<main class="wrap">
+<div class="nav no-print" id="nav"></div>
+
+<!-- ---------- Dashboard ---------- -->
+<section id="dashboard" class="page show">
+  <div class="stats">
+    <div class="stat"><small>Total Jangad</small><b id="stJ">0</b></div>
+    <div class="stat"><small>Total Pieces</small><b id="stP">0</b></div>
+    <div class="stat"><small>Pending Pieces</small><b id="stPend">0</b></div>
+    <div class="stat"><small>Total Weight</small><b id="stW">0</b></div>
+    <div class="stat"><small>Total Amount</small><b id="stA">₹0</b></div>
+    <div class="stat"><small>Pending Payment</small><b id="stDue">₹0</b></div>
+  </div>
+  <div class="card"><h3>Recent Jangad</h3><div id="dashTable"></div></div>
+</section>
+
+<!-- ---------- New / Edit Jangad ---------- -->
+<section id="entry" class="page">
+  <div class="card">
+    <h2 id="entryFormTitle">New Jobwork / Jangad Entry</h2>
+    <input type="hidden" id="editingId">
+    <div class="formgrid">
+      <div><label>Date</label><input id="date" type="date"></div>
+      <div><label>Jangad No.</label><input id="jangad" placeholder="J-1001"></div>
+      <div><label>Party</label><select id="party"></select></div>
+      <div><label>Process</label><select id="processSelect"></select></div>
+      <div><label>Sub Process</label><select id="subprocess"><option value="">Select Sub-process</option></select></div>
+      <div><label>Pieces Received</label><input id="pieces" type="number" value="0"></div>
+      <div><label>Pending Pieces</label><input id="pending" type="number" value="0"></div>
+      <div><label>Total Completed</label><input id="total" type="number" readonly></div>
+      <div><label>Weight</label><input id="weight" type="number" step="0.001" value="0"></div>
+      <div><label>Rate / ભાવ</label><input id="rate" type="number" step="0.01" value="0"></div>
+      <div><label>Payment / પેમેન્ટ (Auto)</label><input id="payment" type="number" step="0.01" value="0" readonly></div>
+      <div><label>Payment Status</label><select id="status"><option>Paid</option><option>Partial</option><option>Pending</option></select></div>
+      <div class="full"><label>Remarks</label><input id="remarks" placeholder="વધારાની નોંધ"></div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="saveBtn" onclick="save()">Save Jangad</button>
+      <button class="light" onclick="clearForm()">Clear</button>
+    </div>
+    <p class="note">Payment Auto = Total Completed Pieces × Rate. પીસ, બાકી પીસ અથવા ભાવ બદલતાં Payment તરત બદલાશે.</p>
+    <p class="note">Internet ન હોય તો પણ Save કામ કરશે — entry deviceમાં સચવાઈ જશે અને net આવતાં આપોઆપ cloudમાં જશે.</p>
+  </div>
+</section>
+
+<!-- ---------- Jangad Ledger ---------- -->
+<section id="entries" class="page">
+  <div class="card">
+    <h2>Jangad Ledger</h2>
+    <div class="toolbar no-print">
+      <input id="q" placeholder="Search Jangad / Party / Process" oninput="render()">
+      <input id="from" type="date" onchange="render()">
+      <input id="to" type="date" onchange="render()">
+      <button class="light" data-perm="export" onclick="exportCSV()">Excel</button>
+      <button class="light" onclick="window.print()">PDF / Print</button>
+    </div>
+    <div id="entryTable"></div>
+  </div>
+</section>
+
+<!-- ---------- Party Master ---------- -->
+<section id="parties" class="page">
+  <div class="card">
+    <h2>Party Master</h2>
+    <div class="formgrid">
+      <div><label>Party Name</label><input id="newParty" placeholder="Party name"></div>
+      <div><label>Mobile</label><input id="partyPhone" placeholder="Mobile"></div>
+      <div><label>Note</label><input id="partyNote" placeholder="Note"></div>
+      <div><label>&nbsp;</label><button class="primary" onclick="addParty()">＋ Add Party</button></div>
+    </div>
+  </div>
+  <div class="card"><div id="partyTable"></div></div>
+</section>
+
+<!-- ---------- Process Master ---------- -->
+<section id="processmaster" class="page">
+  <div class="card">
+    <h2>Process Master</h2>
+    <div class="formgrid">
+      <div><label>Process / પ્રોસેસ</label><input id="newProc" placeholder="Process name"></div>
+      <div><label>&nbsp;</label><button class="primary" onclick="addProcess()">＋ Add Process</button></div>
+    </div>
+    <p class="note">નીચેના list માં દરેક Process સામે ✏️ Edit અને 🗑️ Delete મળશે.</p>
+  </div>
+  <div class="card"><div id="procTable"></div></div>
+</section>
+
+<!-- ---------- Sub-process Master ---------- -->
+<section id="subprocessmaster" class="page">
+  <div class="card">
+    <h2>Sub-process Master / પેટા પ્રોસેસ માસ્ટર</h2>
+    <div class="formgrid">
+      <div><label>Process / પ્રોસેસ</label><select id="subProcParent"></select></div>
+      <div><label>Sub-process / પેટા પ્રોસેસ</label><input id="newSubMaster" placeholder="Sub-process name"></div>
+      <div><label>&nbsp;</label><button class="primary" onclick="addSubProcess()">＋ Add Sub-process</button></div>
+    </div>
+    <p class="note">દરેક Sub-process એક Process સાથે જોડાશે. Entry વખતે પહેલા Process પસંદ કરશો, પછી તેની Sub-process પસંદ કરી શકશો.</p>
+  </div>
+  <div class="card"><div id="subProcTable"></div></div>
+</section>
+
+<!-- ---------- Payment Ledger ---------- -->
+<section id="payment" class="page">
+  <div class="card">
+    <h2>Payment Ledger</h2>
+    <div class="toolbar">
+      <input id="payQ" placeholder="Search party" oninput="renderPayments()">
+      <button class="light" onclick="window.print()">PDF / Print</button>
+    </div>
+    <div id="paymentTable"></div>
+  </div>
+</section>
+
+<!-- ---------- Reports ---------- -->
+<section id="reports" class="page">
+  <div class="card">
+    <h2>Reports</h2>
+    <div class="toolbar">
+      <select id="reportParty" onchange="renderReports()"><option value="">All Parties</option></select>
+      <button class="primary" onclick="renderReports()">Generate</button>
+      <button class="light" data-perm="export" onclick="exportCSV()">Excel</button>
+      <button class="light no-print" onclick="printReport()">🖨️ Print Report</button>
+    </div>
+    <div id="reportTable"></div>
+  </div>
+</section>
+
+<!-- ---------- User Master (admin) ---------- -->
+<section id="users" class="page">
+  <div class="card">
+    <h2>👥 User Master</h2>
+    <input type="hidden" id="uEditId">
+    <div class="formgrid">
+      <div><label>Username</label><input id="uName" autocapitalize="none" placeholder="dinesh"></div>
+      <div><label>પૂરું નામ</label><input id="uFull" placeholder="Dinesh Patel"></div>
+      <div><label>Role</label><select id="uRole"></select></div>
+      <div><label>Status</label><select id="uActive"><option value="1">Active</option><option value="0">Inactive</option></select></div>
+      <div><label>Password (નવો user માટે જરૂરી)</label><input id="uPass" type="text" placeholder="ઓછામાં ઓછા 6 અક્ષર"></div>
+      <div><label>&nbsp;</label><button class="primary" id="userSaveBtn" onclick="userSave()">＋ Add User</button></div>
+    </div>
+    <p class="note">Edit વખતે Password ખાલી છોડો તો જૂનો password એમ જ રહેશે.</p>
+  </div>
+  <div class="card"><div id="userTable"></div></div>
+  <div class="card"><h3>Role એટલે શું?</h3><div id="roleHelp"></div></div>
+  <div class="card">
+    <h3>તમારો પોતાનો Password</h3>
+    <button class="light" onclick="openChangePw(false)">🔑 મારો Password બદલો</button>
+  </div>
+</section>
+
+<!-- ---------- Settings (admin) ---------- -->
+<section id="settings" class="page">
+  <div class="card">
+    <h2>Cloud Sync / Settings</h2>
+    <p class="note">બધા user એક જ data જુએ એ માટે Supabase project connect કરો. URL અને anon key એક વખત નાખો — બધા device પર એ જ નાખવા.</p>
+    <div class="formgrid">
+      <div class="full"><label>Supabase Project URL</label><input id="sbUrl" placeholder="https://your-project.supabase.co"></div>
+      <div class="full"><label>Supabase Anon Key</label><input id="sbKey" placeholder="eyJ..."></div>
+      <div><label>Company</label><input id="companyName" value="Mudra Diamond"></div>
+    </div>
+    <div class="actions">
+      <button class="primary" onclick="saveCloudConfig()">Save &amp; Test</button>
+      <button class="light" onclick="manualSync()">🔄 Sync Now</button>
+      <button class="danger" onclick="disconnectCloud()">Disconnect</button>
+    </div>
+    <p id="syncStatus" class="note"></p>
+  </div>
+  <div class="card">
+    <h3>Sync Status</h3>
+    <div id="syncDetail"></div>
+    <p class="note">Internet ન હોય ત્યારે પણ બધું save થાય છે. જે change હજુ cloud પર નથી ગયા તે “બાકી” માં દેખાય છે અને net આવતાં આપોઆપ ચઢી જશે.</p>
+  </div>
+  <div class="card">
+    <h3>Password બદલો</h3>
+    <button class="light" onclick="openChangePw(false)">🔑 મારો Password બદલો</button>
+  </div>
+</section>
+
+</main>
+</div>
+
+<!-- ---------- change password modal ---------- -->
+<div id="pwModal" class="modal">
+  <div class="modal-card">
+    <h3>🔑 Password બદલો</h3>
+    <p id="cpForce" class="note" style="display:none;color:#9d2820">
+      <b>સલામતી માટે પહેલી વાર login કર્યા પછી password બદલવો જરૂરી છે.</b>
+    </p>
+    <label>જૂનો Password</label><input id="cpOld" type="password">
+    <label>નવો Password</label><input id="cpNew" type="password">
+    <label>નવો Password ફરી લખો</label><input id="cpNew2" type="password">
+    <div class="actions">
+      <button class="primary" onclick="submitChangePw()">બદલો</button>
+      <button class="light" id="cpCancel" onclick="closeChangePw()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="./js/seed-users.js?v=5.0.0"></script>
+<script src="./js/auth.js?v=5.0.0"></script>
+<script src="./js/sync.js?v=5.0.0"></script>
+<script src="./js/app.js?v=5.0.0"></script>
+</body>
+</html>

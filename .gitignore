@@ -1,0 +1,22 @@
+# ---- secrets: never commit ----
+CREDENTIALS.txt
+android/signing.properties
+android/*.keystore
+android/*.jks
+
+# ---- build output ----
+android/build/
+android/.gradle/
+android/local.properties
+
+# ---- backups / editor / OS ----
+*.backup.html
+*.backup.sql
+index.v*.backup.html
+supabase_schema.v*.backup.sql
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store
+android/*.apk.idsig
