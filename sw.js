@@ -2,16 +2,16 @@
    Caches the app shell so the app opens even with no internet.
    Supabase API calls are never cached (always live). */
 
-const CACHE = 'mudra-v5.0.0';
+const CACHE = 'mudra-v5.0.1';
 const SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './css/app.css?v=5.0.0',
-  './js/seed-users.js?v=5.0.0',
-  './js/auth.js?v=5.0.0',
-  './js/sync.js?v=5.0.0',
-  './js/app.js?v=5.0.0',
+  './css/app.css?v=5.0.1',
+  './js/seed-users.js?v=5.0.1',
+  './js/auth.js?v=5.0.1',
+  './js/sync.js?v=5.0.1',
+  './js/app.js?v=5.0.1',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/favicon.png'

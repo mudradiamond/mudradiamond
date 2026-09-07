@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Mudra Diamond">
-<link rel="stylesheet" href="./css/app.css?v=5.0.0">
+<link rel="stylesheet" href="./css/app.css?v=5.0.1">
 </head>
 <body>
 
@@ -32,7 +32,11 @@
 
     <div id="loginErr" class="login-err"></div>
     <button id="liBtn" class="primary">Login</button>
-    <div class="login-foot">Username / Password ભૂલી ગયા હો તો Admin નો સંપર્ક કરો.</div>
+    <div class="login-foot">
+      Username / Password ભૂલી ગયા હો તો Admin નો સંપર્ક કરો.<br>
+      <button type="button" id="cloudSetupBtn" class="linklike">⚙️ નવું ફોન / કમ્પ્યુટર? પહેલા Cloud જોડો</button>
+    </div>
+    <div id="cloudHint" class="cloud-hint"></div>
   </div>
 </div>
 
@@ -229,6 +233,28 @@
 </main>
 </div>
 
+<!-- ---------- cloud setup modal (reachable before login) ---------- -->
+<div id="cloudModal" class="modal">
+  <div class="modal-card">
+    <h3>⚙️ Cloud જોડો</h3>
+    <p class="note">
+      નવા ફોન કે કમ્પ્યુટર પર <b>પહેલા આ ભરો</b>, પછી login કરો. તો તમારો સાચો
+      password અને બધો data સીધો cloud માંથી આવી જશે.
+    </p>
+    <label>Supabase Project URL</label>
+    <input id="cwUrl" placeholder="https://xxxx.supabase.co" autocapitalize="none" spellcheck="false">
+    <label>Supabase Anon / Publishable Key</label>
+    <input id="cwKey" placeholder="eyJ... અથવા sb_publishable_..." autocapitalize="none" spellcheck="false">
+    <label>Company</label>
+    <input id="cwCompany" value="Mudra Diamond">
+    <p id="cwStatus" class="note"></p>
+    <div class="actions">
+      <button class="primary" id="cwSave" onclick="saveCloudSetup()">Save &amp; Connect</button>
+      <button class="light" onclick="closeCloudSetup()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ---------- change password modal ---------- -->
 <div id="pwModal" class="modal">
   <div class="modal-card">
@@ -246,9 +272,9 @@
   </div>
 </div>
 
-<script src="./js/seed-users.js?v=5.0.0"></script>
-<script src="./js/auth.js?v=5.0.0"></script>
-<script src="./js/sync.js?v=5.0.0"></script>
-<script src="./js/app.js?v=5.0.0"></script>
+<script src="./js/seed-users.js?v=5.0.1"></script>
+<script src="./js/auth.js?v=5.0.1"></script>
+<script src="./js/sync.js?v=5.0.1"></script>
+<script src="./js/app.js?v=5.0.1"></script>
 </body>
 </html>

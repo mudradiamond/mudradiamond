@@ -818,13 +818,21 @@ function paintSyncPill(s){
   renderSyncDetail();
 }
 
+/* Compare instants, not strings. Postgres returns "…T10:20:30.123456+00:00"
+   while the browser writes "…T10:20:30.123Z"; comparing those as text makes a
+   newer cloud row look older whenever the two land in the same second. */
+function stamp(v){
+  const t = Date.parse(v || '');
+  return isNaN(t) ? 0 : t;
+}
+
 function mergeRows(localArr, remoteRows){
   const byId = {};
   localArr.forEach(function (r) { byId[r.client_id] = r; });
   (remoteRows || []).forEach(function (rr) {
     if (!rr.client_id) return;
     const l = byId[rr.client_id];
-    if (!l || String(rr.updated_at || '') > String(l.updated_at || '')) byId[rr.client_id] = rr;
+    if (!l || stamp(rr.updated_at) > stamp(l.updated_at)) byId[rr.client_id] = rr;
   });
   return Object.keys(byId).map(function (k) { return byId[k]; });
 }
@@ -880,8 +888,66 @@ function refresh(){
   renderSubProcs();
 }
 
+/* ---------------- cloud setup from the login screen ----------------
+   A freshly installed device starts with only the seeded accounts, while the
+   real passwords live in Supabase. Cloud settings used to sit behind the login,
+   so a new phone could not reach them without first logging in with a seed
+   password. This lets the device connect to the cloud first and pull the real
+   users, so people can sign in with the password they actually set. */
+function openCloudSetup(){
+  const c = Sync.getConfig();
+  $('cwUrl').value = c.url;
+  $('cwKey').value = c.key;
+  $('cwCompany').value = c.company || 'Mudra Diamond';
+  $('cwStatus').textContent = '';
+  $('cloudModal').classList.add('show');
+}
+function closeCloudSetup(){ $('cloudModal').classList.remove('show'); }
+
+async function saveCloudSetup(){
+  const btn = $('cwSave'), st = $('cwStatus');
+  const url = $('cwUrl').value.trim(), key = $('cwKey').value.trim();
+  if (!url || !key) { st.textContent = '❌ URL અને Key બંને જરૂરી છે.'; return; }
+
+  btn.disabled = true; btn.textContent = 'જોડાઈ રહ્યું છે...';
+  st.textContent = 'Connection તપાસાય છે...';
+  Sync.setConfig({ url: url, key: key, company: $('cwCompany').value });
+
+  const t = await Sync.testConnection();
+  if (!t.ok) {
+    btn.disabled = false; btn.textContent = 'Save & Connect';
+    st.textContent = '❌ ' + t.msg;
+    return;
+  }
+
+  st.textContent = '✅ જોડાયું. Users અને data લવાય છે...';
+  const p = await Sync.pull();
+  btn.disabled = false; btn.textContent = 'Save & Connect';
+
+  if (!p.ok) { st.textContent = '⚠️ જોડાયું, પણ data ન આવ્યો: ' + (p.msg || p.reason); return; }
+
+  const n = (p.data && p.data.app_users ? p.data.app_users.length : 0);
+  st.textContent = '✅ થઈ ગયું — ' + n + ' user મળ્યા. હવે તમારા password થી login કરો.';
+  paintCloudHint();
+  setTimeout(closeCloudSetup, 1600);
+}
+
+function paintCloudHint(){
+  const el = $('cloudHint');
+  if (!el) return;
+  const s = Sync.status();
+  if (!s.configured) {
+    el.className = 'cloud-hint warn';
+    el.textContent = '⚪ આ device હજુ cloud સાથે જોડાયું નથી';
+  } else {
+    el.className = 'cloud-hint ok';
+    el.textContent = '🟢 Cloud જોડાયેલું છે — ' + s.company;
+  }
+}
+
 /* ---------------- login screen ---------------- */
 function showLogin(){
+  paintCloudHint();
   $('loginScreen').classList.remove('hide');
   $('app').style.display = 'none';
   $('liUser').value = '';
@@ -950,6 +1016,7 @@ function boot(){
     $('showPw').textContent = p.type === 'password' ? '👁' : '🙈';
   };
   $('syncPill').onclick = manualSync;
+  $('cloudSetupBtn').onclick = openCloudSetup;
 
   // Enter key moves through the entry form
   const order = ['date','jangad','party','processSelect','subprocess','pieces','pending',

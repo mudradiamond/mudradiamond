@@ -69,7 +69,11 @@ th{background:#f4f2ec;text-align:left}
 .login-card button{width:100%;margin-top:18px;padding:13px}
 .login-err{background:#ffe7e5;color:#9d2820;border-radius:8px;padding:9px 11px;font-size:13px;font-weight:700;margin-top:12px;display:none}
 .login-err.show{display:block}
-.login-foot{text-align:center;font-size:11px;color:#888;margin-top:16px}
+.login-foot{text-align:center;font-size:11px;color:#888;margin-top:16px;line-height:2}
+.linklike{background:none;border:0;color:#8a6f2e;font-size:12px;font-weight:700;text-decoration:underline;padding:4px;width:auto;margin:0;cursor:pointer}
+.cloud-hint{font-size:11px;text-align:center;margin-top:8px;font-weight:700}
+.cloud-hint.ok{color:#14532d}
+.cloud-hint.warn{color:#8a6300}
 .pw-wrap{position:relative}
 .pw-wrap button{position:absolute;right:6px;top:26px;width:auto;margin:0;padding:6px 9px;background:transparent;color:#666;font-size:12px}
 
