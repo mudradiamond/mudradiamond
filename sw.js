@@ -45,7 +45,26 @@ self.addEventListener('fetch', function (e) {
   if (url.pathname.indexOf('/rest/v1/') !== -1 || url.pathname.indexOf('/auth/v1/') !== -1) return;
   if (url.origin !== self.location.origin) return;
 
-  // app shell: serve from cache first, refresh in background
+  // The page itself is network-first: it carries the ?v= links to everything
+  // else, so a fresh copy is what makes an update actually reach the user.
+  // Falls back to cache the moment the network fails.
+  if (req.mode === 'navigate' || url.pathname.endsWith('/') ||
+      url.pathname.endsWith('/index.html')) {
+    e.respondWith(
+      fetch(req).then(function (res) {
+        const copy = res.clone();
+        caches.open(CACHE).then(function (c) { c.put(req, copy); });
+        return res;
+      }).catch(function () {
+        return caches.match(req).then(function (hit) {
+          return hit || caches.match('./index.html');
+        });
+      })
+    );
+    return;
+  }
+
+  // everything else: cache first, refresh in background
   e.respondWith(
     caches.match(req).then(function (hit) {
       const net = fetch(req).then(function (res) {
