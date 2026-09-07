@@ -66,7 +66,7 @@ PY
 # 4 ------------------------------------------------------------------- push ---
 echo "==> [4/4] GitHub પર push"
 git add -A
-git add -f "android/MudraDiamond-5.0.0.apk"
+git add -f "android/MudraDiamond-5.1.1.apk"
 git -c user.name="$USER_NAME" -c user.email="rcmakani@gmail.com" \
     commit -q -m "publish: point the app and APK at $URL" || echo "    (કંઈ નવું નથી)"
 
@@ -90,5 +90,5 @@ echo " 1-2 મિનિટ પછી તમારી કાયમી link:"
 echo "   $URL"
 echo ""
 echo " APK download link:"
-echo "   ${URL}android/MudraDiamond-5.0.0.apk"
+echo "   ${URL}android/MudraDiamond-5.1.1.apk"
 echo "=============================================================="

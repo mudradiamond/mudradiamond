@@ -17,8 +17,8 @@ BT="$SDK/build-tools/34.0.0"
 ANDROID_JAR="$SDK/platforms/android-34/android.jar"
 
 APP_ID="com.mudra.diamond"
-VERSION_CODE=1
-VERSION_NAME="5.0.0"
+VERSION_CODE=2
+VERSION_NAME="5.1.1"
 MIN_SDK=23
 TARGET_SDK=34
 

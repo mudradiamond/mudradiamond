@@ -719,10 +719,33 @@ function exportCSV(){
   const csv = '﻿' + [head].concat(rows).map(function (r) {
     return r.map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(',');
   }).join('\n');
+  const name = 'Mudra_Diamond_' + (onReports ? 'Report' : 'Ledger') + '_' + todayLocal() + '.csv';
+  saveFile(name, csv, 'text/csv;charset=utf-8');
+}
+
+/* Android's WebView does not fire its download listener for blob: URLs, so in
+   the app the Excel button would click and silently do nothing. When the
+   native bridge is there, hand it the bytes directly; browsers keep the blob. */
+function saveFile(name, text, mime){
+  const bridge = window.MudraBridge;
+  if (bridge && typeof bridge.saveBase64 === 'function') {
+    try {
+      const bytes = new TextEncoder().encode(text);
+      let bin = '';
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      bridge.saveBase64('data:' + mime + ';base64,' + btoa(bin), name);
+      return;
+    } catch (e) { /* fall through to the browser path */ }
+  }
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  a.download = 'Mudra_Diamond_' + (onReports ? 'Report' : 'Ledger') + '_' + todayLocal() + '.csv';
+  a.href = URL.createObjectURL(new Blob([text], { type: mime }));
+  a.download = name;
+  document.body.appendChild(a);
   a.click();
+  setTimeout(function () {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 1000);
 }
 
 /* ---------------- user master (admin only) ---------------- */

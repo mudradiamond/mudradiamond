@@ -203,7 +203,8 @@ public class MainActivity extends Activity {
                     "window.__mudraSaveBlob('" + url + "','" + name + "');", null);
             } else if (url.startsWith("data:")) {
                 int comma = url.indexOf(',');
-                if (comma > 0) saveBytes(Base64.decode(url.substring(comma + 1), Base64.DEFAULT), name);
+                if (comma > 0) saveBytes(Base64.decode(url.substring(comma + 1), Base64.DEFAULT), name,
+                                         mime != null ? mime : "application/octet-stream");
             } else {
                 try {
                     startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
@@ -214,12 +215,12 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void saveBytes(byte[] bytes, String name) {
+    private void saveBytes(byte[] bytes, String name, String mime) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ContentValues cv = new ContentValues();
                 cv.put(MediaStore.Downloads.DISPLAY_NAME, name);
-                cv.put(MediaStore.Downloads.MIME_TYPE, "text/csv");
+                cv.put(MediaStore.Downloads.MIME_TYPE, mime);
                 cv.put(MediaStore.Downloads.IS_PENDING, 1);
                 Uri item = getContentResolver()
                         .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
@@ -264,7 +265,10 @@ public class MainActivity extends Activity {
         public void saveBase64(String dataUrl, String name) {
             int comma = dataUrl.indexOf(',');
             if (comma < 0) { toast("File save ન થઈ"); return; }
-            saveBytes(Base64.decode(dataUrl.substring(comma + 1), Base64.DEFAULT), name);
+            String mime = "application/octet-stream";
+            int colon = dataUrl.indexOf(':'), semi = dataUrl.indexOf(';');
+            if (colon == 4 && semi > colon) mime = dataUrl.substring(colon + 1, semi);
+            saveBytes(Base64.decode(dataUrl.substring(comma + 1), Base64.DEFAULT), name, mime);
         }
 
         @JavascriptInterface

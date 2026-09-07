@@ -95,12 +95,12 @@ Supabase વગર દરેક device નો data અલગ રહેશે. �
 
 ### તૈયાર APK
 
-`android/MudraDiamond-5.0.0.apk`
+`android/MudraDiamond-5.1.1.apk`
 
 Website live થયા પછી APK ને repo માં મૂકી દો, એટલે કોઈ પણ આ link થી download કરી શકે:
 
 ```
-https://mudradiamond.github.io/mudradiamond/android/MudraDiamond-5.0.0.apk
+https://mudradiamond.github.io/mudradiamond/android/MudraDiamond-5.1.1.apk
 ```
 
 ### Phone માં install
