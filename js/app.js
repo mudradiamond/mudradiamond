@@ -12,6 +12,28 @@ function esc(s){
   });
 }
 function nowISO(){ return new Date().toISOString(); }
+
+/* The calendar date HERE, not in UTC. toISOString() is a UTC clock, so in
+   India (UTC+5:30) anything entered before 05:30 was dated to the previous
+   day — a night shift's jangad landed in yesterday's ledger. */
+function todayLocal(){
+  const d = new Date();
+  return d.getFullYear() + '-' +
+         String(d.getMonth() + 1).padStart(2, '0') + '-' +
+         String(d.getDate()).padStart(2, '0');
+}
+
+/* Billed value of an entry, and how much of it is still owed. */
+function amountOf(e){ return num(e.rate) * num(e.total); }
+function paidOf(e){
+  // `paid` was added in v5.1. Older rows only carried the auto-calculated
+  // `payment`, which always equalled the amount, so read their status instead
+  // rather than reporting every historical entry as fully settled.
+  if (e.paid != null) return num(e.paid);
+  if (e.status === 'Paid') return amountOf(e);
+  return 0;
+}
+function dueOf(e){ return Math.max(0, amountOf(e) - paidOf(e)); }
 function cid(prefix){
   return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
 }
@@ -198,18 +220,48 @@ function loadSubProcesses(){
 
 function autoPayment(){
   const completed = Math.max(0, num($('pieces').value) - num($('pending').value));
+  const amount = completed * num($('rate').value);
   $('total').value = completed;
-  $('payment').value = (completed * num($('rate').value)).toFixed(2);
+  $('amount').value = amount.toFixed(2);
+
+  // Payment status drives what has actually been received. Only "Partial"
+  // needs a number typed in; the other two are implied by the status.
+  const st = $('status').value;
+  const paid = $('paid');
+  if (!paid) return;
+  if (st === 'Paid')         { paid.value = amount.toFixed(2); paid.readOnly = true; }
+  else if (st === 'Pending') { paid.value = '0.00';            paid.readOnly = true; }
+  else                       { paid.readOnly = false; }
+  if (num(paid.value) > amount) paid.value = amount.toFixed(2);
+  $('due').value = Math.max(0, amount - num(paid.value)).toFixed(2);
 }
 
 function clearForm(){
   $('jangad').value = ''; $('subprocess').value = '';
-  ['pieces','pending','weight','rate','payment'].forEach(function (k) { $(k).value = 0; });
+  ['pieces','pending','weight','rate','amount','paid','due'].forEach(function (k) {
+    if ($(k)) $(k).value = 0;
+  });
   $('remarks').value = '';
   $('editingId').value = '';
+  $('date').value = todayLocal();
+  $('status').value = 'Pending';
   $('entryFormTitle').textContent = 'New Jobwork / Jangad Entry';
   $('saveBtn').textContent = 'Save Jangad';
+  lists();
   autoPayment();
+}
+
+/* Keep a value that a master no longer offers. Deleting a party or process
+   used to blank it on the entry form, and re-saving then wiped the name off
+   a historical jangad — the opposite of what the delete prompt promises. */
+function ensureOption(sel, value){
+  if (!sel || !value) return;
+  const has = Array.prototype.some.call(sel.options, function (o) { return o.value === value; });
+  if (has) return;
+  const o = document.createElement('option');
+  o.value = value;
+  o.textContent = value + ' (કાઢી નાખેલ)';
+  sel.appendChild(o);
 }
 
 function save(){
@@ -224,6 +276,14 @@ function save(){
   });
   if (clash) return alert('આ Jangad Number પહેલેથી ઉપયોગમાં છે. કૃપા કરીને બીજો નંબર દાખલ કરો.');
 
+  const pieces = num($('pieces').value), pendingP = num($('pending').value);
+  if (!$('date').value) return alert('તારીખ જરૂરી છે');
+  if (pieces < 0 || pendingP < 0 || num($('rate').value) < 0 || num($('weight').value) < 0)
+    return alert('પીસ, બાકી પીસ, ભાવ કે વજન ઋણ (minus) ન હોઈ શકે.');
+  if (pendingP > pieces)
+    return alert('બાકી પીસ (' + pendingP + ') મળેલા પીસ (' + pieces + ') કરતાં વધારે ન હોઈ શકે.');
+  if (!$('party').value) return alert('Party પસંદ કરો');
+
   const row = {
     client_id: editing || cid('e'),
     company: company(),
@@ -237,7 +297,8 @@ function save(){
     total: num($('total').value),
     weight: num($('weight').value),
     rate: num($('rate').value),
-    payment: num($('payment').value),
+    payment: num($('amount').value),
+    paid: num($('paid').value),
     status: $('status').value,
     remarks: $('remarks').value,
     user_name: whoami(),
@@ -261,11 +322,18 @@ function editEntry(id){
   page('entry');
   $('editingId').value = e.client_id;
   $('date').value = e.date; $('jangad').value = e.jangad;
+  // a master row may since have been deleted — keep the historical name
+  ensureOption($('party'), e.party);
+  ensureOption($('processSelect'), e.process);
   $('party').value = e.party; $('processSelect').value = e.process;
-  loadSubProcesses(); $('subprocess').value = e.subprocess || '';
+  loadSubProcesses();
+  ensureOption($('subprocess'), e.subprocess);
+  $('subprocess').value = e.subprocess || '';
   $('pieces').value = e.pieces; $('pending').value = e.pending;
   $('weight').value = e.weight; $('rate').value = e.rate; $('status').value = e.status;
   $('remarks').value = e.remarks || '';
+  autoPayment();
+  $('paid').value = paidOf(e).toFixed(2);
   autoPayment();
   $('entryFormTitle').textContent = 'Jangad Edit — ' + e.jangad;
   $('saveBtn').textContent = 'Update Jangad';
@@ -291,7 +359,7 @@ function duplicate(id){
   if (!e) return;
   const copy = Object.assign({}, e, {
     client_id: cid('e'), jangad: e.jangad + '-COPY',
-    date: new Date().toISOString().slice(0, 10), user_name: whoami(), deleted: false
+    date: todayLocal(), user_name: whoami(), deleted: false
   });
   db.entries.unshift(copy);
   commit('jobwork_entries', copy);
@@ -314,7 +382,8 @@ function table(rows){
   const showAction = canEdit || canDel || canNew;
   return '<div class=table><table><tr><th>Date</th><th>Jangad</th><th>Party</th><th>Process</th>' +
     '<th>Sub</th><th>Pieces</th><th>Pending</th><th>Total</th><th>Weight</th><th>Rate</th>' +
-    '<th>Payment</th><th>Status</th><th>By</th>' + (showAction ? '<th>Action</th>' : '') + '</tr>' +
+    '<th>Amount</th><th>Paid</th><th>Baki</th><th>Status</th><th>By</th>' +
+    (showAction ? '<th>Action</th>' : '') + '</tr>' +
     rows.map(function (e) {
       let act = '';
       if (showAction) {
@@ -328,7 +397,9 @@ function table(rows){
         '</td><td>' + esc(e.process) + '</td><td>' + esc(e.subprocess) +
         '</td><td class=num>' + e.pieces + '</td><td class=num>' + e.pending +
         '</td><td class=num><b>' + e.total + '</b></td><td class=num>' + e.weight +
-        '</td><td class=num>' + money(e.rate) + '</td><td class=num>' + money(e.payment) +
+        '</td><td class=num>' + money(e.rate) + '</td><td class=num>' + money(amountOf(e)) +
+        '</td><td class=num>' + money(paidOf(e)) +
+        '</td><td class=num>' + (dueOf(e) > 0 ? '<b>' + money(dueOf(e)) + '</b>' : money(0)) +
         '</td><td><span class=pill>' + esc(e.status) + '</span></td><td>' + esc(e.user_name || '') +
         '</td>' + act + '</tr>';
     }).join('') + '</table></div>';
@@ -340,10 +411,8 @@ function renderDash(d){
   $('stP').textContent = d.reduce(function (a, e) { return a + num(e.pieces); }, 0);
   $('stPend').textContent = d.reduce(function (a, e) { return a + num(e.pending); }, 0);
   $('stW').textContent = d.reduce(function (a, e) { return a + num(e.weight); }, 0).toFixed(3);
-  $('stA').textContent = money(d.reduce(function (a, e) { return a + num(e.rate) * num(e.total); }, 0));
-  $('stDue').textContent = money(d.reduce(function (a, e) {
-    return a + Math.max(0, num(e.rate) * num(e.total) - num(e.payment));
-  }, 0));
+  $('stA').textContent = money(d.reduce(function (a, e) { return a + amountOf(e); }, 0));
+  $('stDue').textContent = money(d.reduce(function (a, e) { return a + dueOf(e); }, 0));
   $('dashTable').innerHTML = table(d.slice(0, 8));
 }
 
@@ -565,29 +634,41 @@ function renderPayments(){
     '<th>Paid</th><th>Pending</th><th>Jangad</th></tr>' +
     names.map(function (n) {
       const d = ents.filter(function (e) { return e.party === n; });
-      const a = d.reduce(function (s, e) { return s + num(e.rate) * num(e.total); }, 0);
-      const p = d.reduce(function (s, e) { return s + num(e.payment); }, 0);
-      return '<tr><td>' + esc(n) + '</td><td>' + money(a) + '</td><td>' + money(p) +
-        '</td><td>' + money(Math.max(0, a - p)) + '</td><td>' + d.length + '</td></tr>';
+      const a = d.reduce(function (s, e) { return s + amountOf(e); }, 0);
+      const p = d.reduce(function (s, e) { return s + paidOf(e); }, 0);
+      const due = d.reduce(function (s, e) { return s + dueOf(e); }, 0);
+      return '<tr><td>' + esc(n) + '</td><td class=num>' + money(a) + '</td><td class=num>' + money(p) +
+        '</td><td class=num>' + (due > 0 ? '<b>' + money(due) + '</b>' : money(0)) +
+        '</td><td class=num>' + d.length + '</td></tr>';
     }).join('') + '</table></div>';
 }
 
 /* ---------------- reports ---------------- */
+/* Rows the Reports page is showing, after its own party and date filters. */
+function reportData(){
+  const p = $('reportParty') ? $('reportParty').value : '';
+  const f = $('repFrom') ? $('repFrom').value : '';
+  const t = $('repTo') ? $('repTo').value : '';
+  return live.entries().filter(function (e) {
+    return (!p || e.party === p) && (!f || e.date >= f) && (!t || e.date <= t);
+  });
+}
+
 function renderReports(){
   if (!$('reportTable')) return;
-  const p = $('reportParty') ? $('reportParty').value : '';
-  const d = p ? live.entries().filter(function (e) { return e.party === p; }) : live.entries();
+  const d = reportData();
   const grouped = {};
   d.forEach(function (e) {
-    const k = e.party + '||' + e.process + '||' + (e.subprocess || '');
+    // Rate belongs in the key. Grouping without it put two different rates in
+    // one row and printed just one of them, so Rate x Pieces did not match the
+    // Amount — a bill a party could rightly argue with.
+    const k = e.party + '||' + e.process + '||' + (e.subprocess || '') + '||' + num(e.rate);
     if (!grouped[k]) grouped[k] = { party: e.party, process: e.process,
                                     subprocess: e.subprocess || '-', rate: num(e.rate),
                                     p: 0, w: 0, a: 0, paid: 0, pending: 0 };
     const x = grouped[k];
     x.p += num(e.total); x.w += num(e.weight);
-    x.a += num(e.rate) * num(e.total); x.paid += num(e.payment);
-    x.pending += Math.max(0, num(e.rate) * num(e.total) - num(e.payment));
-    x.rate = num(e.rate);
+    x.a += amountOf(e); x.paid += paidOf(e); x.pending += dueOf(e);
   });
   const rows = Object.keys(grouped).map(function (k) { return grouped[k]; });
   const gt = rows.reduce(function (t, x) {
@@ -609,6 +690,12 @@ function renderReports(){
     '</b></td></tr></table></div>';
 }
 
+function clearReportDates(){
+  if ($('repFrom')) $('repFrom').value = '';
+  if ($('repTo')) $('repTo').value = '';
+  renderReports();
+}
+
 function printReport(){
   const old = document.title;
   document.title = 'Mudra Diamond - Report';
@@ -618,19 +705,23 @@ function printReport(){
 
 function exportCSV(){
   if (!Auth.can('export')) return;
-  const d = data();
+  // Export what the user is looking at. This used to always read the ledger's
+  // search box, so exporting from Reports quietly ignored the report's own
+  // party and date filters and wrote a different set of rows.
+  const onReports = currentPage === 'reports';
+  const d = onReports ? reportData() : data();
   const head = ['Date','Jangad','Party','Process','Sub-process','Pieces','Pending','Total',
-                'Weight','Rate','Amount','Payment','Status','Entered By'];
+                'Weight','Rate','Amount','Paid','Baki','Status','Entered By'];
   const rows = d.map(function (e) {
     return [e.date, e.jangad, e.party, e.process, e.subprocess, e.pieces, e.pending, e.total,
-            e.weight, e.rate, num(e.rate) * num(e.total), e.payment, e.status, e.user_name || ''];
+            e.weight, e.rate, amountOf(e), paidOf(e), dueOf(e), e.status, e.user_name || ''];
   });
   const csv = '﻿' + [head].concat(rows).map(function (r) {
     return r.map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(',');
   }).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  a.download = 'Mudra_Diamond_Jobwork_Report.csv';
+  a.download = 'Mudra_Diamond_' + (onReports ? 'Report' : 'Ledger') + '_' + todayLocal() + '.csv';
   a.click();
 }
 
@@ -763,8 +854,27 @@ function loadCloudForm(){
   renderSyncDetail();
 }
 
+async function retryStuck(){
+  setSync('અટકેલા change ફરી મોકલાય છે...');
+  const r = await Sync.retryDead();
+  setSync(r.ok ? '✅ થઈ ગયું.' : '⚠️ હજુ ' + Sync.status().dead + ' બાકી — ભૂલ ઉપર જુઓ.');
+  renderSyncDetail();
+}
+
 async function saveCloudConfig(){
   if (!Auth.can('cloud')) return;
+  // Rows are stored and fetched per company name, so renaming it hides every
+  // existing row from the cloud rather than moving them.
+  const oldCo = Sync.getConfig().company;
+  const newCo = $('companyName').value.trim();
+  if (newCo && newCo !== oldCo && db.entries.length) {
+    const ok = confirm(
+      'Company નું નામ "' + oldCo + '" માંથી "' + newCo + '" કરો છો.\n\n' +
+      'Cloudમાં data company ના નામ પ્રમાણે જ જોડાય છે, એટલે જૂના ' +
+      db.entries.length + ' record નવા નામ હેઠળ નહીં દેખાય.\n\n' +
+      'ખરેખર બદલવું છે?');
+    if (!ok) { $('companyName').value = oldCo; return; }
+  }
   Sync.setConfig({ url: $('sbUrl').value, key: $('sbKey').value, company: $('companyName').value });
   setSync('Testing connection...');
   const t = await Sync.testConnection();
@@ -799,6 +909,10 @@ function renderSyncDetail(){
     '<p class=note>Device: <b>' + (s.online ? 'Online' : 'Offline') + '</b></p>' +
     '<p class=note>Upload બાકી: <b>' + s.pending + '</b> change</p>' +
     '<p class=note>છેલ્લો Sync: <b>' + (s.lastPull ? new Date(s.lastPull).toLocaleString() : '—') + '</b></p>' +
+    (s.dead ? '<p class=note style="color:#9d2820"><b>⚠️ ' + s.dead + ' change cloud એ સ્વીકાર્યા નથી.</b> ' +
+              'એ deviceમાં સલામત છે. ' +
+              '<button class="light" onclick="retryStuck()">ફરી પ્રયત્ન કરો</button></p>' +
+              '<p class=note>' + esc((Sync.deadRows()[0] || {}).error || '') + '</p>' : '') +
     (s.error ? '<p class=note style="color:#9d2820">છેલ્લી ભૂલ: ' + esc(s.error) + '</p>' : '');
 }
 
@@ -999,9 +1113,10 @@ function boot(){
   Sync.onStatus(paintSyncPill);
   Sync.start();
 
-  $('date').value = new Date().toISOString().slice(0, 10);
+  $('date').value = todayLocal();
 
-  ['pieces','pending','rate'].forEach(function (k) {
+  ['pieces','pending','rate','paid','status'].forEach(function (k) {
+    if (!$(k)) return;
     $(k).addEventListener('input', autoPayment);
     $(k).addEventListener('change', autoPayment);
   });
@@ -1020,7 +1135,7 @@ function boot(){
 
   // Enter key moves through the entry form
   const order = ['date','jangad','party','processSelect','subprocess','pieces','pending',
-                 'weight','rate','status','remarks'];
+                 'weight','rate','status','paid','remarks'];
   order.forEach(function (id, i) {
     const el = $(id);
     if (!el) return;

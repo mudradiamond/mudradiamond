@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Mudra Diamond">
-<link rel="stylesheet" href="./css/app.css?v=5.0.4">
+<link rel="stylesheet" href="./css/app.css?v=5.1.0">
 </head>
 <body>
 
@@ -84,15 +84,18 @@
       <div><label>Total Completed</label><input id="total" type="number" readonly></div>
       <div><label>Weight</label><input id="weight" type="number" step="0.001" value="0"></div>
       <div><label>Rate / ભાવ</label><input id="rate" type="number" step="0.01" value="0"></div>
-      <div><label>Payment / પેમેન્ટ (Auto)</label><input id="payment" type="number" step="0.01" value="0" readonly></div>
-      <div><label>Payment Status</label><select id="status"><option>Paid</option><option>Partial</option><option>Pending</option></select></div>
+      <div><label>Amount / રકમ (Auto)</label><input id="amount" type="number" step="0.01" value="0" readonly></div>
+      <div><label>Payment Status</label><select id="status"><option>Pending</option><option>Partial</option><option>Paid</option></select></div>
+      <div><label>Paid / જમા થયેલા</label><input id="paid" type="number" step="0.01" value="0"></div>
+      <div><label>Baki / બાકી (Auto)</label><input id="due" type="number" step="0.01" value="0" readonly></div>
       <div class="full"><label>Remarks</label><input id="remarks" placeholder="વધારાની નોંધ"></div>
     </div>
     <div class="actions">
       <button class="primary" id="saveBtn" onclick="save()">Save Jangad</button>
       <button class="light" onclick="clearForm()">Clear</button>
     </div>
-    <p class="note">Payment Auto = Total Completed Pieces × Rate. પીસ, બાકી પીસ અથવા ભાવ બદલતાં Payment તરત બદલાશે.</p>
+    <p class="note">Amount = Total Completed Pieces × Rate — આપોઆપ ગણાય છે.</p>
+    <p class="note"><b>Payment Status</b>: <b>Pending</b> = કંઈ જમા નથી · <b>Paid</b> = પૂરું જમા · <b>Partial</b> = જેટલા મળ્યા તે "Paid" માં લખો. <b>બાકી</b> આપોઆપ ગણાશે અને Payment Ledger તથા Reports માં દેખાશે.</p>
     <p class="note">Internet ન હોય તો પણ Save કામ કરશે — entry deviceમાં સચવાઈ જશે અને net આવતાં આપોઆપ cloudમાં જશે.</p>
   </div>
 </section>
@@ -171,6 +174,9 @@
     <h2>Reports</h2>
     <div class="toolbar">
       <select id="reportParty" onchange="renderReports()"><option value="">All Parties</option></select>
+      <input id="repFrom" type="date" onchange="renderReports()" title="From date">
+      <input id="repTo" type="date" onchange="renderReports()" title="To date">
+      <button class="light" onclick="clearReportDates()">બધી તારીખ</button>
       <button class="primary" onclick="renderReports()">Generate</button>
       <button class="light" data-perm="export" onclick="exportCSV()">Excel</button>
       <button class="light no-print" onclick="printReport()">🖨️ Print Report</button>
@@ -272,10 +278,10 @@
   </div>
 </div>
 
-<script src="./js/cloud-config.js?v=5.0.4"></script>
-<script src="./js/seed-users.js?v=5.0.4"></script>
-<script src="./js/auth.js?v=5.0.4"></script>
-<script src="./js/sync.js?v=5.0.4"></script>
-<script src="./js/app.js?v=5.0.4"></script>
+<script src="./js/cloud-config.js?v=5.1.0"></script>
+<script src="./js/seed-users.js?v=5.1.0"></script>
+<script src="./js/auth.js?v=5.1.0"></script>
+<script src="./js/sync.js?v=5.1.0"></script>
+<script src="./js/app.js?v=5.1.0"></script>
 </body>
 </html>

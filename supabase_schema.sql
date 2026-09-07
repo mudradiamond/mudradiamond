@@ -29,8 +29,18 @@ create table if not exists public.jobwork_entries (
   updated_at  timestamptz not null default now()
 );
 
--- v4 -> v5 upgrade (safe to re-run)
+-- upgrades (safe to re-run)
 alter table public.jobwork_entries add column if not exists deleted boolean not null default false;
+
+-- v5.1: `payment` is the billed amount (pieces x rate) and always equals it,
+-- so it could never express what a party had actually settled. `paid` holds
+-- the money received; anything still owed is amount - paid.
+alter table public.jobwork_entries add column if not exists paid numeric not null default 0;
+
+-- backfill: entries marked Paid before this column existed were fully settled
+update public.jobwork_entries
+   set paid = payment
+ where paid = 0 and status = 'Paid';
 
 create index if not exists jobwork_company_date_idx  on public.jobwork_entries(company, date);
 create index if not exists jobwork_company_party_idx on public.jobwork_entries(company, party);
