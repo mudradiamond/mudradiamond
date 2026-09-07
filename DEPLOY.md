@@ -12,7 +12,7 @@
 તમને મળશે એવી link:
 
 ```
-https://<તમારું-github-username>.github.io/mudra-diamond/
+https://mudradiamond.github.io/mudradiamond/
 ```
 
 આ link **કાયમી** છે, **free** છે, **HTTPS** છે અને domain ખરીદવાની જરૂર નથી.
@@ -25,7 +25,7 @@ https://<તમારું-github-username>.github.io/mudra-diamond/
 ### Step 2 — નવો repository
 
 1. [github.com/new](https://github.com/new) ખોલો
-2. **Repository name**: `mudra-diamond`
+2. **Repository name**: `mudradiamond`
 3. **Public** પસંદ કરો
    > GitHub ના free plan પર Pages માટે repo public હોવો જરૂરી છે.
    > નીચે "Security" વાંચો — એટલે જ દરેક default password એક જ વાર ચાલે છે.
@@ -37,7 +37,7 @@ https://<તમારું-github-username>.github.io/mudra-diamond/
 `F:\MUDRA` folder માં terminal ખોલીને (username બદલીને):
 
 ```bash
-git remote add origin https://github.com/YOUR-USERNAME/mudra-diamond.git
+git remote add origin https://github.com/mudradiamond/mudradiamond.git
 git branch -M main
 git push -u origin main
 ```
@@ -56,7 +56,7 @@ Personal access tokens → Tokens (classic) → Generate new token** → `repo` 
 તમારી કાયમી link તૈયાર:
 
 ```
-https://YOUR-USERNAME.github.io/mudra-diamond/
+https://mudradiamond.github.io/mudradiamond/
 ```
 
 ### પછી કંઈ બદલવું હોય તો
@@ -100,7 +100,7 @@ Supabase વગર દરેક device નો data અલગ રહેશે. �
 Website live થયા પછી APK ને repo માં મૂકી દો, એટલે કોઈ પણ આ link થી download કરી શકે:
 
 ```
-https://YOUR-USERNAME.github.io/mudra-diamond/android/MudraDiamond-5.0.0.apk
+https://mudradiamond.github.io/mudradiamond/android/MudraDiamond-5.0.0.apk
 ```
 
 ### Phone માં install
