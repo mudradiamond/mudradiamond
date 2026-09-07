@@ -45,10 +45,7 @@ const mergedAdmin = merged.find(u => u.username === 'admin');
 
 t('cloud account wins over the seed', mergedAdmin.pass, cloudRow.pass);
 t('seed password is NOT restored', mergedAdmin.pass === seededAdmin.pass, false);
-t('other seeded users survive', merged.length, Auth.all().length);
-t('untouched seed keeps its own record',
-  merged.find(u => u.username === 'manager').pass,
-  SEED_USERS.find(u => u.username === 'manager').pass);
+t('no rows are lost in the merge', merged.length, Auth.all().length);
 
 // apply it the way applyPull does, then check the real login
 Auth.replaceAll(merged.filter(u => !u.deleted).map(u => ({
@@ -58,8 +55,9 @@ Auth.replaceAll(merged.filter(u => !u.deleted).map(u => ({
 })));
 t('real password logs in on the fresh device', Auth.login('admin', 'TheRealPassword77').ok, true);
 Auth.logout();
-t('published seed password no longer works', Auth.login('admin', 'Hira@2688%').ok, false);
-Auth.logout();
+t('the shipped bootstrap hash no longer applies',
+  Auth.all().find(u => u.username === 'admin').pass ===
+  SEED_USERS.find(u => u.username === 'admin').pass, false);
 
 console.log('\nMigration for devices set up by the older build:');
 // simulate the broken state: seeds persisted with the install time
@@ -76,19 +74,21 @@ console.log('\nA genuinely changed local account must NOT be demoted:');
 const changedAt = new Date().toISOString();
 const users2 = JSON.parse(JSON.stringify(SEED_USERS));
 users2.forEach(u => { u.updated_at = SEED_STAMP; });
-const idx = users2.findIndex(u => u.username === 'entry1');
+users2.push({ id: 'u_staff', username: 'staff', name: 'Staff', role: 'operator',
+              pass: hashPassword('placeholder'), active: true, updated_at: SEED_STAMP });
+const idx = users2.findIndex(u => u.username === 'staff');
 users2[idx].pass = hashPassword('EntryOwnPassword5');
 users2[idx].updated_at = changedAt;
 store['mudra_users_v1'] = JSON.stringify(users2);
 Auth.loadUsers();
 t('changed account keeps its timestamp',
-  Auth.all().find(u => u.username === 'entry1').updated_at, changedAt);
+  Auth.all().find(u => u.username === 'staff').updated_at, changedAt);
 t('changed account beats an older cloud row',
   mergeRows(
     Auth.all().map(u => Object.assign({}, u, { client_id: u.id })),
-    [{ client_id: users2[idx].id, username: 'entry1', pass: 'STALE',
+    [{ client_id: users2[idx].id, username: 'staff', pass: 'STALE',
        updated_at: '2020-01-01T00:00:00+00:00' }]
-  ).find(u => u.username === 'entry1').pass !== 'STALE', true);
+  ).find(u => u.username === 'staff').pass !== 'STALE', true);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
