@@ -111,6 +111,8 @@ const ROLES = {
 };
 
 /* ---------------- User store ---------------- */
+const SEED_STAMP = '1970-01-01T00:00:00.000Z';
+
 const Auth = (function () {
   const UKEY = 'mudra_users_v1', SKEY = 'mudra_session_v1';
   let users = [];
@@ -123,10 +125,34 @@ const Auth = (function () {
     catch (e) { users = []; }
     if (!Array.isArray(users) || !users.length) {
       users = JSON.parse(JSON.stringify(typeof SEED_USERS !== 'undefined' ? SEED_USERS : []));
-      users.forEach(function (u) { u.updated_at = u.updated_at || new Date().toISOString(); });
+      // Seeds are the fallback of last resort, so stamp them at the epoch:
+      // any account that has ever reached the cloud must win the merge on a
+      // fresh device. Stamping them with "now" made a brand-new install look
+      // newer than the real account and quietly restore the starter password
+      // that ships in the published seed file.
+      users.forEach(function (u) { u.updated_at = u.updated_at || SEED_STAMP; });
       persist();
     }
+    demoteUntouchedSeeds();
     return users;
+  }
+
+  /* An account whose password is still exactly the shipped seed hash has never
+     been used, so it must never outrank a real account from the cloud. Devices
+     set up by an earlier build already stored those with the install time, so
+     re-stamp them here rather than leaving them to win the next merge. */
+  function demoteUntouchedSeeds(){
+    const seeds = (typeof SEED_USERS !== 'undefined' ? SEED_USERS : []);
+    if (!seeds.length) return;
+    let changed = false;
+    users.forEach(function (u) {
+      const s = seeds.find(function (x) { return x.username === u.username; });
+      if (s && s.pass === u.pass && u.updated_at !== SEED_STAMP) {
+        u.updated_at = SEED_STAMP;
+        changed = true;
+      }
+    });
+    if (changed) persist();
   }
 
   function loadSession(){
