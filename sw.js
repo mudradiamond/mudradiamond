@@ -2,17 +2,17 @@
    Caches the app shell so the app opens even with no internet.
    Supabase API calls are never cached (always live). */
 
-const CACHE = 'mudra-v5.0.3';
+const CACHE = 'mudra-v5.0.4';
 const SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './css/app.css?v=5.0.3',
-  './js/cloud-config.js?v=5.0.3',
-  './js/seed-users.js?v=5.0.3',
-  './js/auth.js?v=5.0.3',
-  './js/sync.js?v=5.0.3',
-  './js/app.js?v=5.0.3',
+  './css/app.css?v=5.0.4',
+  './js/cloud-config.js?v=5.0.4',
+  './js/seed-users.js?v=5.0.4',
+  './js/auth.js?v=5.0.4',
+  './js/sync.js?v=5.0.4',
+  './js/app.js?v=5.0.4',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/favicon.png'
@@ -52,7 +52,12 @@ self.addEventListener('fetch', function (e) {
   if (req.mode === 'navigate' || url.pathname.endsWith('/') ||
       url.pathname.endsWith('/index.html')) {
     e.respondWith(
-      fetch(req).then(function (res) {
+      // cache:'reload' skips the browser's HTTP cache. GitHub Pages serves the
+      // page with max-age=600, and a plain fetch() here is answered from that
+      // cache — so a pushed fix could sit invisible for ten minutes even though
+      // this handler is network-first. The ?v= links inside the page cover the
+      // rest, so only the page itself needs this.
+      fetch(req.url, { cache: 'reload', credentials: 'same-origin' }).then(function (res) {
         const copy = res.clone();
         caches.open(CACHE).then(function (c) { c.put(req, copy); });
         return res;
