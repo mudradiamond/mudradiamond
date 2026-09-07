@@ -1,0 +1,81 @@
+name: Deploy to GitHub Pages
+
+# Publishes the site and injects the Supabase connection from repository
+# secrets, so the key lives in the deployed page but never in the repository.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          rsync -a --exclude '.git' --exclude '.github' --exclude '.claude' \
+                --exclude '_site' ./ _site/
+
+      - name: Inject Supabase connection
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          COMPANY_NAME: ${{ vars.COMPANY_NAME }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "::warning::SUPABASE_URL / SUPABASE_ANON_KEY secrets are not set."
+            echo "::warning::Publishing without a default connection — each device"
+            echo "::warning::will have to use the 'Cloud જોડો' button on the login screen."
+            exit 0
+          fi
+          COMPANY="${COMPANY_NAME:-Mudra Diamond}"
+          # written with jq so quotes and backslashes cannot break the JS
+          jq -n --arg url "$SUPABASE_URL" --arg key "$SUPABASE_KEY" --arg co "$COMPANY" \
+            '"const CLOUD_DEFAULTS = " + ({url:$url, key:$key, company:$co} | tojson) + ";"' \
+            -r > _site/js/cloud-config.js
+          echo "Injected connection for company: $COMPANY"
+          echo "URL host: $(echo "$SUPABASE_URL" | sed -E 's#https?://([^./]+).*#\1#')"
+
+      # Placeholder text like "https://your-project.supabase.co" is fine; a real
+      # project host or an actual key is not. Matches real hosts (20 lowercase
+      # letters) and both key formats, so a slip gets caught before it ships.
+      - name: Verify no credentials are committed
+        run: |
+          hits=$(git ls-files '*.js' '*.html' '*.json' '*.md' | xargs grep -nE \
+            'https://[a-z]{20}\.supabase\.co|sb_publishable_[A-Za-z0-9_-]|sb_secret_|eyJhbGciOi' \
+            || true)
+          if [ -n "$hits" ]; then
+            echo "$hits"
+            echo "::error::Supabase credentials are committed in the repository. Remove them."
+            exit 1
+          fi
+          echo "OK — no Supabase credentials committed."
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

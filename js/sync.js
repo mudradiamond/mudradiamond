@@ -25,8 +25,19 @@ const Sync = (function () {
 
   /* ---------------- persistence ---------------- */
   function loadCfg(){
-    try { cfg = Object.assign(cfg, JSON.parse(localStorage.getItem(CKEY) || '{}')); }
-    catch (e) { /* keep defaults */ }
+    // A deployment can ship its own connection so nobody has to type one in.
+    // Anything the user saved on this device still wins over the default.
+    if (typeof CLOUD_DEFAULTS !== 'undefined' && CLOUD_DEFAULTS.url && CLOUD_DEFAULTS.key) {
+      cfg.url = String(CLOUD_DEFAULTS.url).replace(/\/+$/, '');
+      cfg.key = CLOUD_DEFAULTS.key;
+      cfg.company = CLOUD_DEFAULTS.company || cfg.company;
+    }
+    try {
+      const saved = JSON.parse(localStorage.getItem(CKEY) || '{}');
+      if (saved.disconnected) { cfg.url = ''; cfg.key = ''; }
+      else if (saved.url && saved.key) cfg = Object.assign(cfg, saved);
+      if (saved.company) cfg.company = saved.company;
+    } catch (e) { /* keep defaults */ }
     try { queue = JSON.parse(localStorage.getItem(QKEY) || '[]') || []; }
     catch (e) { queue = []; }
     lastPull = localStorage.getItem(MKEY) || '';
@@ -40,11 +51,14 @@ const Sync = (function () {
     cfg.url = String(next.url || '').trim().replace(/\/+$/, '');
     cfg.key = String(next.key || '').trim();
     cfg.company = String(next.company || '').trim() || 'Mudra Diamond';
+    cfg.disconnected = false;
     saveCfg();
     setState(configured() ? 'pending' : 'local');
   }
+  // Sticky: without the flag a deployment default would silently reconnect
+  // this device on the next reload.
   function disconnect(){
-    cfg = { url: '', key: '', company: cfg.company };
+    cfg = { url: '', key: '', company: cfg.company, disconnected: true };
     saveCfg();
     setState('local');
   }
